@@ -512,6 +512,7 @@ class ChineseTransformerJobOffersClassifier(BaseHierarchicalJobOffersClassifier)
             raise RuntimeError("Output size is not provided")
 
         dataset = {"train": (y, X)}
+
         if y_val is not None and X_val is not None:
             dataset["val"] = (y_val, X_val)
         
@@ -557,9 +558,9 @@ class ChineseTransformerJobOffersClassifier(BaseHierarchicalJobOffersClassifier)
                 use_hierarchical_loss=self.use_hierarchical_loss,
                 use_multitask_learning=self.use_multitask_learning,
                 hierarchical_loss_weights=self.hierarchical_loss_weights,
-                task_weights=self.task_weights
-
+                task_weights=self.task_weights,
             )
+
         else:
             # 使用标准版
             if self.verbose:
@@ -573,7 +574,7 @@ class ChineseTransformerJobOffersClassifier(BaseHierarchicalJobOffersClassifier)
                 weight_decay=self.weight_decay,
                 train_batch_size=self.batch_size,
                 eval_batch_size=self.batch_size,
-                verbose=self.verbose
+                verbose=self.verbose,
             )
 
         trainer.fit(self.base_model, datamodule=data_module, ckpt_path=self.ckpt_path)
@@ -637,7 +638,7 @@ class ChineseTransformerJobOffersClassifier(BaseHierarchicalJobOffersClassifier)
                 task_weights=self.task_weights,
                 train_batch_size=self.batch_size,
                 eval_batch_size=self.batch_size,
-                verbose=self.verbose
+                verbose=self.verbose,
             )
         else:
             self.base_model = TransformerClassifier(
@@ -645,7 +646,7 @@ class ChineseTransformerJobOffersClassifier(BaseHierarchicalJobOffersClassifier)
                 output_size=self.last_level_labels_count,
                 train_batch_size=self.batch_size,
                 eval_batch_size=self.batch_size,
-                verbose=self.verbose
+                verbose=self.verbose,
             )
 
         # 查找checkpoint

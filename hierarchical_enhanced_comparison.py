@@ -33,11 +33,11 @@ if __name__ == '__main__':
         HIERARCHICAL_AVAILABLE = False
         print(f"⚠️ 层次化功能不可用: {e}")
     
-    from job_offers_classifier.job_offers_classfier import (
+    from job_offers_classifier.job_offers_classfier_old import (
         ChineseTransformerJobOffersClassifier,
         get_recommended_chinese_models
     )
-    from job_offers_classifier.job_offers_utils import create_hierarchy_node
+    from job_offers_classifier.job_offers_utils_old import create_hierarchy_node
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, accuracy_score
     

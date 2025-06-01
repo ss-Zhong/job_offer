@@ -163,29 +163,24 @@ class EnhancedTransformerClassifier(TransformerClassifier):
         
         # 保存层次化配置
         self.isco_hierarchy = isco_hierarchy
+        
         self.use_hierarchical_loss = use_hierarchical_loss and isco_hierarchy is not None
         self.use_multitask_learning = use_multitask_learning and isco_hierarchy is not None
         
         # 损失权重
-        self.hierarchical_loss_weights = hierarchical_loss_weights or {
-            1: 8.0, 2: 4.0, 3: 2.0, 4: 1.0
-        }
-        self.task_weights = task_weights or {
-            1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4
-        }
+        self.hierarchical_loss_weights = hierarchical_loss_weights
+        self.task_weights = task_weights
         
         # 替换输出层
         if self.use_multitask_learning:
             # 移除原有的输出层
-            self.output = None
+            self.fc_head = None
             # 创建层次化分类头
             self.hierarchical_head = HierarchicalClassificationHead(
                 hidden_size=self.transformer.config.hidden_size,
                 hierarchy=self.isco_hierarchy,
                 dropout_rate=0.1
             )
-        else:
-            self.dropout = nn.Dropout(p=0.1)
             
         # 创建损失函数
         if self.use_multitask_learning:
@@ -211,41 +206,55 @@ class EnhancedTransformerClassifier(TransformerClassifier):
             print(f"   层次化损失: {'启用' if self.use_hierarchical_loss else '禁用'}")
             print(f"   多任务学习: {'启用' if self.use_multitask_learning else '禁用'}")
 
-    def forward(self, input_ids, attention_mask, token_type_ids=None):
-        """前向传播"""
-        # 获取BERT输出
-        outputs = self.transformer(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids
-        )
+    # def forward(self, input_ids, attention_mask, token_type_ids=None):
+    #     """前向传播"""
+    #     # 获取BERT输出
+    #     outputs = self.transformer(
+    #         input_ids=input_ids,
+    #         attention_mask=attention_mask,
+    #         token_type_ids=token_type_ids
+    #     )
         
-        # 使用CLS token的表示
-        pooled_output = outputs.last_hidden_state[:, 0]
+    #     # 使用CLS token的表示
+    #     pooled_output = outputs.last_hidden_state[:, 0]
+        
+    #     if self.use_multitask_learning:
+    #         # 多任务输出
+    #         logits_dict = self.hierarchical_head(pooled_output)
+    #         return logits_dict
+    #     else:
+    #         # 单任务输出
+    #         pooled_output = self.dropout(pooled_output)
+    #         logits = self.fc_head(pooled_output)
+    #         return logits
+
+    def forward(self, batch, labels=None):
+        
+        transformer_output = self.transformer(batch['input_ids'], attention_mask=batch['attention_mask'])
+        # 使用[CLS] token的输出
+        transformer_output = transformer_output.last_hidden_state[:, 0, :]
         
         if self.use_multitask_learning:
-            # 多任务输出
-            logits_dict = self.hierarchical_head(pooled_output)
-            return logits_dict
+            return self.hierarchical_head(transformer_output)
+        elif self.fc_head is not None:
+            output_ = self.fc_head(transformer_output, labels=labels)
+            return output_
         else:
-            # 单任务输出
-            pooled_output = self.dropout(pooled_output)
-            logits = self.output(pooled_output)
-            return logits
+            print("Fault in EnhancedTransformerClassifier Forward")
+            return transformer_output
 
     def training_step(self, batch, batch_idx):
         """训练步骤"""
-        input_ids = batch['input_ids']
-        attention_mask = batch['attention_mask']
-        token_type_ids = batch.get('token_type_ids', None)
-        labels = batch['labels']
+        if batch['labels'] is not None:  # Windows fix
+            batch['labels'] = batch['labels'].type(torch.LongTensor)
+            batch['labels'] = batch['labels'].to(self.device)
         
         # 前向传播
-        outputs = self.forward(input_ids, attention_mask, token_type_ids)
+        outputs = self.forward(batch)
         
         # 计算损失
         if self.use_multitask_learning:
-            loss, loss_dict = self.criterion(outputs, labels)
+            loss, loss_dict = self.criterion(outputs, batch['labels'])
             
             # 记录各级别损失
             for level in [1, 2, 3, 4]:
@@ -253,9 +262,7 @@ class EnhancedTransformerClassifier(TransformerClassifier):
                     self.log(f'train_level_{level}_loss', loss_dict[f'level_{level}_loss'], 
                             on_step=True, on_epoch=True, prog_bar=False)
         else:
-            if isinstance(outputs, dict):
-                outputs = outputs[4]  # 使用4级输出
-            loss = self.criterion(outputs, labels)
+            loss = self.criterion(outputs, batch['labels'])
         
         # 记录总损失
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -264,39 +271,68 @@ class EnhancedTransformerClassifier(TransformerClassifier):
 
     def validation_step(self, batch, batch_idx):
         """验证步骤"""
-        input_ids = batch['input_ids']
-        attention_mask = batch['attention_mask']
-        token_type_ids = batch.get('token_type_ids', None)
-        labels = batch['labels']
-        
-        # 前向传播
-        outputs = self.forward(input_ids, attention_mask, token_type_ids)
-        
         # 计算损失和准确率
         if self.use_multitask_learning:
-            loss, loss_dict = self.criterion(outputs, labels)
+            # # 这里未实现
+            # pass
             
-            # 计算各级别准确率
-            self._calculate_hierarchical_accuracy(outputs, labels)
+            # if batch['labels'] is not None:  # Windows fix
+            #     batch['labels'] = batch['labels'].type(torch.LongTensor)
+            #     batch['labels'] = batch['labels'].to(self.device)
+            # labels = batch['labels']
+        
+            # # 前向传播
+            # outputs = self.forward(batch)
             
-            # 记录损失
-            self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
+            # loss, loss_dict = self.criterion(outputs, labels)
             
-            # 使用4级预测作为主要预测
-            predictions = torch.argmax(outputs[4], dim=1)
+            # # 计算各级别准确率
+            # self._calculate_hierarchical_accuracy(outputs, labels)
+            
+            # # 记录损失
+            # self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
+            
+            # predictions = torch.argmax(outputs[4], dim=1)
+            # return loss
+        
+            if batch['labels'] is not None:  # Windows fix
+                batch['labels'] = batch['labels'].type(torch.LongTensor)
+                batch['labels'] = batch['labels'].to(self.device)
+
+            outputs = self.forward(batch)
+            loss, loss_dict = self.criterion(outputs, batch['labels'])
+            scores = F.softmax(outputs[4], dim=-1)
+            
+            if self.metrics is None:
+                return loss
+            
+            # 处理层次化预测
+            if self.hparams.labels_paths is not None:
+                new_scores = torch.zeros((scores.shape[0], self.eval_num_labels)).to(self.device)
+                for i, path in enumerate(self.hparams.labels_paths):
+                    path_score = scores[:, path]
+                    new_scores[:, i] = path_score.prod(axis=1)
+                scores = new_scores
+                assert scores.shape == (scores.shape[0], self.eval_num_labels)
+                true_loss = F.cross_entropy(scores, batch['labels'])
+                self.log(f'val_true_loss', true_loss, on_epoch=True, logger=True)
+
+            # 修复：分别记录每个指标，而不是记录整个字典
+            try:
+                metrics_dict = self.metrics(scores, batch['labels'])
+                for metric_name, metric_value in metrics_dict.items():
+                    self.log(f'val_{metric_name}', metric_value, on_epoch=True, logger=True)
+            except Exception as e:
+                # 如果指标计算失败，只记录损失
+                if self.hparams.verbose:
+                    print(f"Warning: Metrics calculation failed: {e}")
+            
+            self.log(f'val_loss', loss, on_epoch=True, prog_bar=True, logger=True)
+            
+            return loss
+        
         else:
-            if isinstance(outputs, dict):
-                outputs = outputs[4]
-            loss = self.criterion(outputs, labels)
-            predictions = torch.argmax(outputs, dim=1)
-            
-            self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
-        
-        # 计算准确率
-        correct = (predictions == labels).float().mean()
-        self.log('val_accuracy', correct, on_step=False, on_epoch=True, prog_bar=True)
-        
-        return loss
+            return self._eval_step(batch, eval_name='val')
 
     def validation_epoch_end(self, outputs):
         """验证epoch结束时的处理"""
@@ -343,12 +379,12 @@ class EnhancedTransformerClassifier(TransformerClassifier):
 
     def predict_step(self, batch, batch_idx):
         """预测步骤"""
-        input_ids = batch['input_ids']
-        attention_mask = batch['attention_mask']
-        token_type_ids = batch.get('token_type_ids', None)
+        # input_ids = batch['input_ids']
+        # attention_mask = batch['attention_mask']
+        # token_type_ids = batch.get('token_type_ids', None)
         
         # 前向传播
-        outputs = self.forward(input_ids, attention_mask, token_type_ids)
+        outputs = self.forward(batch)
         
         if self.use_multitask_learning:
             # 返回4级预测的概率
@@ -395,9 +431,9 @@ class EnhancedTransformerClassifier(TransformerClassifier):
                 'weight_decay': self.hparams.weight_decay,
                 'lr': self.hparams.learning_rate * 2  # 分类头使用2倍学习率
             })
-        elif hasattr(self, 'output') and self.output is not None:
+        elif hasattr(self, 'fc_head') and self.fc_head is not None:
             optimizer_grouped_parameters.append({
-                'params': self.output.parameters(),
+                'params': self.fc_head.parameters(),
                 'weight_decay': self.hparams.weight_decay,
                 'lr': self.hparams.learning_rate * 2
             })

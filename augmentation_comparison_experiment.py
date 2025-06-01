@@ -20,11 +20,11 @@ torch.set_float32_matmul_precision('medium')
 
 # 导入原有模块
 if __name__ == '__main__':
-    from job_offers_classifier.job_offers_classfier import (
+    from job_offers_classifier.job_offers_classfier_old import (
         ChineseTransformerJobOffersClassifier,
         get_recommended_chinese_models
     )
-    from job_offers_classifier.job_offers_utils import create_hierarchy_node
+    from job_offers_classifier.job_offers_utils_old import create_hierarchy_node
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, accuracy_score
     

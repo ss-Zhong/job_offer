@@ -17,13 +17,13 @@ torch.set_float32_matmul_precision('medium')  # 优化Tensor Core性能
 # 修复Windows多进程问题
 if __name__ == '__main__':
     # 导入你的分类器
-    from job_offers_classifier.job_offers_classfier import (
+    from job_offers_classifier.job_offers_classfier_old import (
         create_chinese_job_classifier,
         ChineseTransformerJobOffersClassifier,
         ChineseLinearJobOffersClassifier,
         get_recommended_chinese_models
     )
-    from job_offers_classifier.job_offers_utils import create_hierarchy
+    from job_offers_classifier.job_offers_utils_old import create_hierarchy
     from job_offers_classifier.load_save import save_as_text, load_texts
 
     def create_demo_data():

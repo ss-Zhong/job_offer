@@ -24,7 +24,7 @@ class FullyConnectedOutput(nn.Module):
     def __init__(self, input_size, output_size, layer_units=(10,), nonlin=nn.ReLU(), hidden_dropout=0, output_nonlin=nn.Softmax(dim=1), criterion=nn.CrossEntropyLoss(), labels_groups=None, labels_groups_mapping=None):
         super().__init__()
         self.input_size = input_size
-        self.output_size = output_size
+        self.fc_head_size = output_size
         self.nonlin = nonlin
         self.layer_units = layer_units
         self.output_nonlin = output_nonlin
@@ -39,7 +39,7 @@ class FullyConnectedOutput(nn.Module):
             self._labels_groups_mapping[~self._labels_groups_mask_mapping] += 1
 
         sequence = []
-        units = [self.input_size] + list(self.layer_units) + [self.output_size]
+        units = [self.input_size] + list(self.layer_units) + [self.fc_head_size]
         for in_size, out_size in zip(units, units[1:]):
             sequence.extend([nn.Linear(in_size, out_size), self.nonlin, nn.Dropout(self.hidden_dropout)])
 
@@ -51,10 +51,11 @@ class FullyConnectedOutput(nn.Module):
             
         if self.labels_groups is None:
             output = self.output_nonlin(logits_output)
+            # output = logits_output
             if labels is not None:
                 return self.criterion(logits_output, labels).mean(), output
             else:
-                return output
+                return logits_output
             
         else:
             output = torch.zeros_like(logits_output, dtype=torch.float32)
@@ -71,7 +72,7 @@ class FullyConnectedOutput(nn.Module):
                 criterion = criterion.sum() / labels_groups_mask.sum()
                 return criterion, output
             else:
-                return output
+                return logits_output
 
 
 class TransformerClassifier(LightningModule):
@@ -157,7 +158,7 @@ class TransformerClassifier(LightningModule):
             if self.hparams.verbose:
                 print("✓ Transformer parameters frozen")
 
-        self.output = FullyConnectedOutput(
+        self.fc_head = FullyConnectedOutput(
             self.config.hidden_size, 
             output_size, 
             layer_units=(), 
@@ -231,10 +232,10 @@ class TransformerClassifier(LightningModule):
         # 使用[CLS] token的输出
         transformer_output = transformer_output.last_hidden_state[:, 0, :]
         
-        if self.output is None:
+        if self.fc_head is None:
             return transformer_output
         else:
-            return self.output.forward(transformer_output, labels=labels)
+            return self.fc_head.forward(transformer_output, labels=labels)
         
     def training_step(self, batch, batch_idx):
         if batch['labels'] is not None:  # Windows fix

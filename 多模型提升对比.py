@@ -37,7 +37,7 @@ if __name__ == '__main__':
     
     # 导入数据增强模块 - 确保这个文件在当前目录下
     from chinese_job_data_augmentation import EnhancedJobDataProcessor
-    from job_offers_classifier.job_offers_utils import create_hierarchy_node
+    from job_offers_classifier.job_offers_utils_old import create_hierarchy_node
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, accuracy_score
     

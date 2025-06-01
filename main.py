@@ -19,8 +19,8 @@ warnings.filterwarnings('ignore')
 torch.set_float32_matmul_precision('medium')
 
 from job_offers_classifier.datasets import *
-from job_offers_classifier.job_offers_classfier import *
-from job_offers_classifier.job_offers_utils import *
+from job_offers_classifier.job_offers_classfier_old import *
+from job_offers_classifier.job_offers_utils_old import *
 from job_offers_classifier.load_save import *
 
 

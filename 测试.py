@@ -1,5 +1,5 @@
 # 在Python命令行中测试
-from job_offers_classifier.job_offers_classfier import ChineseTransformerJobOffersClassifier
+from job_offers_classifier.job_offers_classfier_old import ChineseTransformerJobOffersClassifier
 
 # 创建一个测试实例
 test_hierarchy = {'1234': {'parents': ['1', '12', '123'], 'label': '1234', 'level': 4}}

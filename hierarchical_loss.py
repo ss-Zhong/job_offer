@@ -26,7 +26,7 @@ class HierarchicalISCOLoss(nn.Module):
         """
         Args:
             hierarchy: ISCO层次结构字典
-            level_weights: 各级别错误的惩罚权重 {1: 8.0, 2: 4.0, 3: 2.0, 4: 1.0}
+            level_weights: 各级别错误的惩罚权重
             base_loss_fn: 基础损失函数类型 ('cross_entropy' or 'focal')
             reduction: 损失聚合方式 ('mean' or 'sum')
         """
@@ -154,7 +154,6 @@ class HierarchicalISCOLoss(nn.Module):
         hierarchy_weights = self._get_hierarchy_weights(targets, predictions)
         
         # 应用层次权重
-        # print(f"!!!!! base_loss: {base_loss}, hierarchy_weights: {hierarchy_weights}")
         weighted_loss = base_loss * hierarchy_weights
         
         # 聚合损失
@@ -164,7 +163,7 @@ class HierarchicalISCOLoss(nn.Module):
             return weighted_loss.sum()
         else:
             return weighted_loss
-
+    
     def get_detailed_loss_info(self, logits: torch.Tensor, targets: torch.Tensor) -> Dict:
         """获取详细的损失信息，用于分析和调试"""
         with torch.no_grad():

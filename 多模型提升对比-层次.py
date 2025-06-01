@@ -63,22 +63,23 @@ class HierarchicalMultiModelComparison:
             #     'use_multitask_learning': False,
             #     'description': '基线模型（标准交叉熵损失）'
             # },
-            {
-                'name': 'Hierarchical',
-                'use_hierarchical_loss': True,
-                'use_multitask_learning': False,
-                # 'hierarchical_loss_weights': {1: 2.0, 2: 1.0, 3: 0.5, 4: 0.25},
-                'hierarchical_loss_weights': {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0},
-                'description': '层次化损失（单任务）'
-            },
             # {
-            #     'name': 'Multitask',
+            #     'name': 'Hierarchical',
             #     'use_hierarchical_loss': True,
-            #     'use_multitask_learning': True,
-            #     'hierarchical_loss_weights': {1: 8.0, 2: 4.0, 3: 2.0, 4: 1.0},
-            #     'task_weights': {1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4},
-            #     'description': '多任务层次化学习'
-            # }
+            #     'use_multitask_learning': False,
+            #     # 'hierarchical_loss_weights': {1: 0.5, 2: 1.0, 3: 1.5, 4: 2.0},
+            #     # 'hierarchical_loss_weights': {1: 2.0, 2: 1.5, 3: 1, 4: 0.5},
+            #     'hierarchical_loss_weights': {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0},
+            #     'description': '层次化损失（单任务）'
+            # },
+            {
+                'name': 'Multitask',
+                'use_hierarchical_loss': True,
+                'use_multitask_learning': True,
+                'hierarchical_loss_weights': {1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0},
+                'task_weights': {1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4},
+                'description': '多任务层次化学习'
+            }
         ]
         
         # 测试模型
@@ -109,7 +110,7 @@ class HierarchicalMultiModelComparison:
             'max_epochs': 8, # 默认设的是8
             'patience': 4,
             'max_seq_length': 256,
-            'batch_size': 256, # 原来是16
+            'batch_size': 64, # 原来是16
             'learning_rate': 2e-5
         }
         
@@ -226,6 +227,7 @@ class HierarchicalMultiModelComparison:
             
             # 训练
             print(f"🎯 开始训练...")
+            
             classifier.fit(train_labels, train_texts, y_val=val_labels, X_val=val_texts)
             
             # 预测
@@ -712,7 +714,7 @@ def main():
     
     try:
         # 创建实验对象
-        experiment = HierarchicalMultiModelComparison(csv_path, max_samples=50000)
+        experiment = HierarchicalMultiModelComparison(csv_path, max_samples=4000)
         
         # 运行对比实验
         results, results_dir = experiment.run_hierarchical_comparison()

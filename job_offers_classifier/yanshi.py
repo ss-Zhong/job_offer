@@ -11,12 +11,12 @@ import numpy as np
 from pathlib import Path
 
 # 导入你的分类器
-from job_offers_classifier.job_offers_classfier import (
+from job_offers_classifier.job_offers_classfier_old import (
     create_chinese_job_classifier,
     ChineseTransformerJobOffersClassifier,
     get_recommended_chinese_models
 )
-from job_offers_classifier.job_offers_utils import create_hierarchy
+from job_offers_classifier.job_offers_utils_old import create_hierarchy
 from job_offers_classifier.load_save import save_as_text, load_texts
 
 def create_demo_data():
@@ -216,7 +216,7 @@ def quick_linear_demo():
     hierarchy = create_hierarchy(hierarchy_df)
     
     # 创建线性分类器（更快）
-    from job_offers_classifier.job_offers_classfier import ChineseLinearJobOffersClassifier
+    from job_offers_classifier.job_offers_classfier_old import ChineseLinearJobOffersClassifier
     
     classifier = ChineseLinearJobOffersClassifier(
         model_dir="./demo_linear_model",
